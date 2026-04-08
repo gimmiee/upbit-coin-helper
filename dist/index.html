@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>코린이 구조대</title>
+    <!-- Google tag (gtag.js): 배포 전 G-측정ID로 교체 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-N8E2TBVHQH"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      window.gtag = gtag;
+      gtag("js", new Date());
+      gtag("config", "G-N8E2TBVHQH");
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script type="module" crossorigin src="/assets/index-BcVN_G00.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BGcz3GBy.css">
+  </head>
+  <body>
+    <main class="container">
+      <header class="page-header">
+        <div class="page-header__text">
+          <h1>🛟 코린이 구조대</h1>
+          <p class="subtitle">
+            코인과 기간을 고른 뒤 조회하면 가격·거래량·변동률을 한 화면에서 볼
+            수 있습니다.
+          </p>
+          <p class="header-api-notice">본 서비스는 Upbit Open API를 기반으로 제공됩니다.</p>
+        </div>
+        <div class="page-header__actions">
+          <p class="header-disclaimer">
+            본 서비스는 투자 자문이 아닌 정보 제공용 분석 도구입니다.<br />
+            최종 매매 의사결정과 그에 따른 손익 책임은 이용자 본인에게
+            귀속됩니다.
+          </p>
+          <div class="theme-row">
+            <span class="theme-row__label">테마</span>
+            <button
+              id="themeToggleBtn"
+              type="button"
+              class="theme-toggle-btn"
+              aria-label="테마 전환"
+            >
+              <span id="themeToggleIcon" aria-hidden="true">☀️</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel controls-panel">
+        <div class="row">
+          <label for="marketSelect">코인 선택</label>
+          <input
+            id="marketSearch"
+            type="text"
+            placeholder="코인 검색 (이름/심볼)"
+          />
+          <select id="marketSelect">
+            <option value="KRW-BTC" selected>코인 목록 불러오는 중...</option>
+          </select>
+        </div>
+
+        <div class="row mode-row">
+          <span class="mode-label">조회 방식</span>
+          <label
+            ><input type="radio" name="rangeMode" value="preset" checked />
+            기간</label
+          >
+          <label
+            ><input type="radio" name="rangeMode" value="date" />
+            시작일-종료일</label
+          >
+        </div>
+
+        <div class="row" id="presetWrap">
+          <label for="preset">기간 선택</label>
+          <select id="preset">
+            <option value="1">최근 1일</option>
+            <option value="7">최근 1주</option>
+            <option value="30" selected>최근 1개월</option>
+            <option value="365">최근 1년</option>
+          </select>
+        </div>
+
+        <div class="row date-wrap hidden" id="dateWrap">
+          <input id="startDate" type="date" aria-label="시작일" />
+          <span class="date-separator" aria-hidden="true">-</span>
+          <input id="endDate" type="date" aria-label="종료일" />
+        </div>
+
+        <button id="fetchBtn" type="button">조회</button>
+      </section>
+
+      <section class="panel status-panel">
+        <p id="statusText">조회 버튼을 눌러 데이터를 가져오세요.</p>
+      </section>
+
+      <section class="panel beginner-report" id="beginnerReport">
+        <h2>오늘의 코린이 맞춤 리포트</h2>
+        <p id="rConclusion">조회 버튼을 누르면 결론이 표시됩니다.</p>
+        <p id="rReason" class="report-reason">-</p>
+        <div class="report-insights">
+          <p class="report-insights__title">💡 인사이트</p>
+          <ul id="rInsights" class="report-insights__list">
+            <li>조회하면 인사이트가 표시됩니다.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="beginner-quick-grid" id="beginnerQuickGrid">
+        <article class="panel quick-card quick-card--price" id="qPriceCard">
+          <h3>💰 지금 가격이 싼가요?</h3>
+          <p id="qPriceState">-</p>
+          <p id="qPriceHint" class="quick-hint">-</p>
+          <div
+            id="qPriceTooltip"
+            class="quick-card-tooltip"
+            role="status"
+            aria-live="polite"
+          ></div>
+        </article>
+        <article class="panel quick-card quick-card--heat" id="qHeatCard">
+          <h3>
+            🌡️ 지금 시장 열기는 어떤가요?
+            <small class="stat-help">RSI 기반</small>
+          </h3>
+          <p id="qHeatState">-</p>
+          <p id="qHeatHint" class="quick-hint">-</p>
+          <div
+            id="qHeatTooltip"
+            class="quick-card-tooltip"
+            role="status"
+            aria-live="polite"
+          ></div>
+        </article>
+        <article class="panel quick-card quick-card--vol" id="qVolCard">
+          <h3>
+            🌊 지금 흔들림은 어떤가요? <small class="stat-help">변동성</small>
+          </h3>
+          <p id="qVolState">-</p>
+          <p id="qVolHint" class="quick-hint">-</p>
+          <div
+            id="qVolTooltip"
+            class="quick-card-tooltip"
+            role="status"
+            aria-live="polite"
+          ></div>
+        </article>
+        <article class="panel quick-card quick-card--escape" id="qEscapeCard">
+          <h3>
+            🚪 탈출 기회는 어디인가요?
+            <small class="stat-help">매물대 기반</small>
+          </h3>
+          <p id="qEscapeState">-</p>
+          <p id="qEscapeHint" class="quick-hint">-</p>
+          <div
+            id="qEscapeTooltip"
+            class="quick-card-tooltip"
+            role="status"
+            aria-live="polite"
+          ></div>
+        </article>
+        <article class="panel quick-card quick-card--fakeout" id="qFakeoutCard">
+          <h3>
+            🕵️ 개미털기 감별사 <small class="stat-help">가짜 하락 분석</small>
+          </h3>
+          <p id="qFakeoutState">-</p>
+          <p id="qFakeoutHint" class="quick-hint">-</p>
+          <div
+            id="qFakeoutTooltip"
+            class="quick-card-tooltip"
+            role="status"
+            aria-live="polite"
+          ></div>
+        </article>
+        <article
+          class="panel quick-card quick-card--btc-game"
+          id="qBtcGameCard"
+        >
+          <h3>
+            🎮 비트코인 눈치 게임 <small class="stat-help">동조화 지수</small>
+          </h3>
+          <p id="qBtcGameState">-</p>
+          <p id="qBtcGameHint" class="quick-hint">-</p>
+          <div
+            id="qBtcGameTooltip"
+            class="quick-card-tooltip"
+            role="status"
+            aria-live="polite"
+          ></div>
+        </article>
+      </section>
+
+      <section class="panel expert-intro">
+        <button
+          id="expertToggleBtn"
+          class="expert-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="expertDetailPanel"
+        >
+          <span>🔎 전문가 상세 지표</span>
+          <span class="expert-toggle__icon" aria-hidden="true">▸</span>
+        </button>
+        <p>
+          아래 지표는 숫자 원본을 유지합니다. 코린이 요약을 먼저 보고, 필요할 때
+          상세 지표를 참고하세요.
+        </p>
+      </section>
+
+      <div id="expertDetailPanel" class="hidden">
+        <section class="summary-grid" id="summaryGrid">
+          <article class="panel expert-group">
+            <p class="expert-group__title">가격/추세</p>
+            <p class="stat-label">
+              추세 분석 (MA20) <small class="stat-help">중기 흐름 방향</small>
+            </p>
+            <p id="sTrend" class="stat-value expert-group__headline">-</p>
+            <div class="expert-core-list">
+              <p class="expert-row">
+                <span class="expert-row__label">최신 종가</span
+                ><span id="sClose" class="expert-row__value">-</span>
+              </p>
+              <p class="expert-row">
+                <span class="expert-row__label">기간 수익률</span
+                ><span id="sRoi" class="expert-row__value">-</span>
+              </p>
+            </div>
+            <details class="expert-details">
+              <summary>근거 지표 펼치기</summary>
+              <div class="expert-details__body">
+                <section class="expert-detail-block">
+                  <p class="expert-detail-block__title">추세 신호</p>
+                  <p class="expert-row">
+                    <span class="expert-row__label">최근 MA5/MA20 교차</span
+                    ><span id="sCross" class="expert-row__value">-</span>
+                  </p>
+                </section>
+                <section class="expert-detail-block">
+                  <p class="expert-detail-block__title">30일 구간 위치</p>
+                  <p class="expert-row">
+                    <span class="expert-row__label">현재 위치</span
+                    ><span id="sPricePos" class="expert-row__value">-</span>
+                  </p>
+                  <div
+                    class="range-meter"
+                    id="sPricePosMeter"
+                    role="meter"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                    aria-label="최근 30일 가격 위치"
+                  >
+                    <div id="sPricePosBar" class="range-meter__fill"></div>
+                  </div>
+                  <p class="meter-labels" aria-hidden="true">
+                    <span>LOW</span>
+                    <span id="sPricePosPct">0.0%</span>
+                    <span>HIGH</span>
+                  </p>
+                </section>
+                <section class="expert-detail-block">
+                  <p class="expert-detail-block__title">기간 범위</p>
+                  <p class="expert-row">
+                    <span class="expert-row__label">고점/저점</span
+                    ><span id="sHiLo" class="expert-row__value">-</span>
+                  </p>
+                </section>
+              </div>
+            </details>
+          </article>
+
+          <article class="panel expert-group">
+            <p class="expert-group__title">에너지/모멘텀</p>
+            <p class="stat-label">
+              상승/하락 에너지 (Force)
+              <small class="stat-help">매수/매도 힘</small>
+            </p>
+            <p
+              id="sForceInterpretation"
+              class="stat-value expert-group__headline"
+            >
+              -
+            </p>
+            <div class="expert-core-list">
+              <p class="expert-row">
+                <span class="expert-row__label">모멘텀 (최근 7일)</span
+                ><span id="sMomentum" class="expert-row__value">-</span>
+              </p>
+              <p class="expert-row">
+                <span class="expert-row__label">거래량 압력</span
+                ><span id="sVolumePressure" class="expert-row__value">-</span>
+              </p>
+            </div>
+            <details class="expert-details">
+              <summary>근거 지표 펼치기</summary>
+              <div class="expert-details__body">
+                <section class="expert-detail-block">
+                  <p class="expert-detail-block__title">Force 강도</p>
+                  <div
+                    class="force-meter"
+                    id="sForceMeter"
+                    role="meter"
+                    aria-valuemin="-100"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                    aria-label="상승 하락 에너지 강도"
+                  >
+                    <div class="force-meter__axis" aria-hidden="true"></div>
+                    <div id="sForceMeterFill" class="force-meter__fill"></div>
+                  </div>
+                  <p id="sForce" class="meter-subtext">-</p>
+                </section>
+                <section class="expert-detail-block">
+                  <p class="expert-detail-block__title">거래 활동</p>
+                  <p class="expert-row">
+                    <span class="expert-row__label">상승일 / 하락일</span
+                    ><span id="sUpDown" class="expert-row__value">-</span>
+                  </p>
+                  <p class="expert-row">
+                    <span class="expert-row__label">평균 거래량</span
+                    ><span id="sAvgVol" class="expert-row__value">-</span>
+                  </p>
+                </section>
+              </div>
+            </details>
+          </article>
+
+          <article class="panel expert-group">
+            <p class="expert-group__title">시장 환경</p>
+            <p class="stat-label">변동성 레짐</p>
+            <p id="sVolRegime" class="stat-value expert-group__headline">-</p>
+            <div class="expert-core-list">
+              <p class="expert-row">
+                <span class="expert-row__label">최대 변동폭(일)</span
+                ><span id="sVolatility" class="expert-row__value">-</span>
+              </p>
+              <p class="expert-row">
+                <span class="expert-row__label">변동성 돌파 감지</span
+                ><span id="sVolBreakout" class="expert-row__value">-</span>
+              </p>
+            </div>
+            <details class="expert-details">
+              <summary>근거 지표 펼치기</summary>
+              <div class="expert-details__body">
+                <section class="expert-detail-block">
+                  <p class="expert-detail-block__title">연동/괴리 신호</p>
+                  <p class="expert-row">
+                    <span class="expert-row__label">BTC 동조화 지수</span
+                    ><span id="sBtcCorrelation" class="expert-row__value"
+                      >-</span
+                    >
+                  </p>
+                  <p class="expert-row expert-row--stacked">
+                    <span class="expert-row__label">거래량-가격 다이버전스</span
+                    ><span id="sVolPriceDivergence" class="expert-row__value"
+                      >-</span
+                    >
+                  </p>
+                </section>
+              </div>
+            </details>
+          </article>
+        </section>
+      </div>
+
+      <article class="panel chart-panel">
+        <h2>📈 가격 차트 (종가)</h2>
+        <p id="priceLegendHint" class="legend-help">
+          범례(종가/MA5/MA20/골든크로스/데드크로스) 위에 마우스를 올리면 설명이
+          보이고, 필요 없는 범례를 클릭하면 해당 추세선(지표)을 숨기거나 다시
+          표시할 수 있습니다.
+        </p>
+        <div
+          id="priceChartLegend"
+          class="price-chart-legend"
+          aria-label="가격 차트 범례"
+        ></div>
+        <div class="chart-wrap chart-main">
+          <canvas id="priceChart"></canvas>
+          <div
+            id="legendBubble"
+            class="legend-bubble hidden"
+            role="status"
+            aria-live="polite"
+          ></div>
+        </div>
+      </article>
+
+      <article class="panel chart-panel">
+        <h2>⚡ 실시간 가격 차트</h2>
+        <div class="row realtime-controls">
+          <label for="realtimeUnit">타임프레임</label>
+          <select id="realtimeUnit">
+            <option value="minute:1">1분봉</option>
+            <option value="minute:5">5분봉</option>
+            <option value="minute:15">15분봉</option>
+            <option value="minute:30" selected>30분봉</option>
+            <option value="minute:60">60분봉</option>
+            <option value="minute:240">240분봉</option>
+            <option value="day">일봉</option>
+          </select>
+          <span class="realtime-count-control hidden" aria-hidden="true">
+            <label for="realtimeCount">캔들 수</label>
+            <select id="realtimeCount">
+              <option value="60">60개</option>
+              <option value="120" selected>120개</option>
+              <option value="240">240개</option>
+            </select>
+          </span>
+          <span
+            class="realtime-line-toggles"
+            role="group"
+            aria-label="실시간 기준선 표시"
+          >
+            <label
+              ><input id="realtimeTargetToggle" type="checkbox" checked />
+              목표가</label
+            >
+            <label
+              ><input id="realtimeStopToggle" type="checkbox" checked />
+              손절가</label
+            >
+          </span>
+        </div>
+        <p class="legend-help">
+          상단 검색 기간과 무관하게 독립 갱신되며, 휠로 확대/축소하고 드래그로
+          과거 구간을 탐색할 수 있습니다.
+        </p>
+        <div id="realtimeInfoBar" class="realtime-info-bar" aria-live="polite">
+          <span class="realtime-info-bar__symbol">-</span>
+          <span class="realtime-info-bar__item">O -</span>
+          <span class="realtime-info-bar__item">H -</span>
+          <span class="realtime-info-bar__item">L -</span>
+          <span class="realtime-info-bar__item">C -</span>
+          <span class="realtime-info-bar__item">변동 -</span>
+          <span class="realtime-info-bar__item">VOLUME -</span>
+        </div>
+        <div class="chart-wrap chart-main">
+          <canvas id="candleLiteChart"></canvas>
+        </div>
+      </article>
+
+      <section class="charts-grid">
+        <article class="panel chart-panel">
+          <h2>📊 거래량 차트</h2>
+          <div class="chart-wrap"><canvas id="volumeChart"></canvas></div>
+        </article>
+        <article class="panel chart-panel">
+          <h2>📉 변동률 차트 (%)</h2>
+          <div class="chart-wrap"><canvas id="changeChart"></canvas></div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "upbit-chart-ui",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^8.0.5"
+  }
+}

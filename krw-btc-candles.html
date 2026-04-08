@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KRW-BTC 일봉 데이터</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0f1419;
+        --surface: #1a2332;
+        --text: #e7ecf3;
+        --muted: #8b9cb3;
+        --accent: #f7931a;
+        --up: #22c55e;
+        --down: #ef4444;
+        --border: rgba(255, 255, 255, 0.08);
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f4f6f9;
+          --surface: #ffffff;
+          --text: #1a2332;
+          --muted: #5c6d84;
+          --border: rgba(0, 0, 0, 0.08);
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        padding: 1.25rem;
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      header {
+        margin-bottom: 1.5rem;
+      }
+      h1 {
+        margin: 0 0 0.35rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .alert {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        color: var(--muted);
+      }
+      .alert strong {
+        color: var(--text);
+      }
+      .file-row {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      input[type="file"] {
+        font-size: 0.8rem;
+        max-width: 100%;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+      }
+      .controls {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 0.85rem 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        align-items: center;
+      }
+      .controls label {
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+      .controls input,
+      .controls button {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        border-radius: 0.5rem;
+        padding: 0.4rem 0.55rem;
+        font-size: 0.82rem;
+      }
+      .controls button {
+        cursor: pointer;
+      }
+      .stat {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 0.85rem 1rem;
+      }
+      .stat label {
+        display: block;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        margin-bottom: 0.25rem;
+      }
+      .stat .val {
+        font-size: 1.05rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .charts-grid {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 880px) {
+        .charts-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .charts-grid > .chart-panel:first-child {
+          grid-column: 1 / -1;
+        }
+      }
+      .chart-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 1rem 1rem 0.5rem;
+      }
+      .chart-panel h2 {
+        margin: 0 0 0.75rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .chart-wrap {
+        position: relative;
+        width: 100%;
+        height: min(220px, 38vh);
+      }
+      .chart-wrap--main {
+        height: min(280px, 48vh);
+      }
+      .table-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        overflow: hidden;
+      }
+      .table-card h2 {
+        margin: 0;
+        padding: 1rem 1rem 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .table-scroll {
+        overflow-x: auto;
+        padding: 0.75rem 0 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+        font-variant-numeric: tabular-nums;
+      }
+      th,
+      td {
+        padding: 0.5rem 0.65rem;
+        text-align: right;
+        border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+      }
+      th:first-child,
+      td:first-child {
+        text-align: left;
+        position: sticky;
+        left: 0;
+        background: var(--surface);
+        z-index: 1;
+        box-shadow: 4px 0 8px -4px rgba(0, 0, 0, 0.2);
+      }
+      th {
+        font-weight: 600;
+        color: var(--muted);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      tbody tr:hover td {
+        background: rgba(247, 147, 26, 0.06);
+      }
+      .pct-up {
+        color: var(--up);
+      }
+      .pct-down {
+        color: var(--down);
+      }
+      .roi-up {
+        color: var(--up);
+      }
+      .roi-down {
+        color: var(--down);
+      }
+      footer {
+        margin-top: 1.5rem;
+        text-align: center;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>KRW-BTC 일봉</h1>
+        <p class="sub" id="metaLine">데이터를 불러오는 중…</p>
+      </header>
+
+      <div class="alert" id="loadHint" hidden>
+        <strong>로컬 파일로 열었을 때</strong> 브라우저 보안 때문에 같은 폴더의 JSON을
+        자동으로 못 읽을 수 있습니다. 아래에서 JSON 파일을 선택하거나, 이 폴더를
+        HTTP로 띄운 뒤 페이지를 여세요.
+        <div class="file-row">
+          <label for="jsonFile">JSON 불러오기:</label>
+          <input type="file" id="jsonFile" accept=".json,application/json" />
+        </div>
+      </div>
+
+      <section class="stats" id="stats" hidden>
+        <div class="stat">
+          <label>표시 단위</label>
+          <span class="val">최근 100개</span>
+        </div>
+        <div class="stat">
+          <label>최신 종가 (KRW)</label>
+          <span class="val" id="sLast">—</span>
+        </div>
+        <div class="stat">
+          <label>기간 (KST)</label>
+          <span class="val" id="sRange">—</span>
+        </div>
+        <div class="stat">
+          <label>100일 고가 / 저가</label>
+          <span class="val" id="sHiLo">—</span>
+        </div>
+        <div class="stat">
+          <label>기간 ROI</label>
+          <span class="val" id="sRoi">—</span>
+        </div>
+      </section>
+      <section class="controls" id="rangeControls" hidden>
+        <label for="startDate">시작일</label>
+        <input type="date" id="startDate" />
+        <label for="endDate">종료일</label>
+        <input type="date" id="endDate" />
+        <button id="applyRange" type="button">기간 적용</button>
+        <button id="resetRange" type="button">전체(최근 100개) 보기</button>
+      </section>
+
+      <section id="chartSection" class="charts-grid" hidden>
+        <div class="chart-panel">
+          <h2>종가 추이 (과거 → 최신)</h2>
+          <div class="chart-wrap chart-wrap--main">
+            <canvas id="priceChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-panel">
+          <h2>거래량 (BTC)</h2>
+          <div class="chart-wrap">
+            <canvas id="volumeChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-panel">
+          <h2>일간 등락률 (%)</h2>
+          <div class="chart-wrap">
+            <canvas id="changeChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <section class="table-card" id="tableSection" hidden>
+        <h2>일별 상세 (최신순)</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>일자 (KST)</th>
+                <th>시가</th>
+                <th>고가</th>
+                <th>저가</th>
+                <th>종가</th>
+                <th>전일대비</th>
+                <th>등락률</th>
+                <th>거래대금(원)</th>
+                <th>거래량(BTC)</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer>소스: KRW-BTC_2026-04-07_100.json · 업비트 일봉 형식</footer>
+    </div>
+
+    <script>
+      const JSON_NAME = "KRW-BTC_2026-04-07_100.json";
+      const nfKrw = new Intl.NumberFormat("ko-KR");
+      const nfKrw0 = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 });
+      const nfVol = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 4 });
+
+      let chartInstances = { price: null, volume: null, change: null };
+      let allData = [];
+
+      function destroyCharts() {
+        for (const k of Object.keys(chartInstances)) {
+          if (chartInstances[k]) {
+            chartInstances[k].destroy();
+            chartInstances[k] = null;
+          }
+        }
+      }
+
+      function formatKrw(n) {
+        return nfKrw0.format(Math.round(n));
+      }
+
+      function render(data) {
+        if (!Array.isArray(data) || data.length === 0) {
+          document.getElementById("metaLine").textContent =
+            "유효한 캔들 배열이 아닙니다.";
+          return;
+        }
+
+        const chronological = [...data].reverse();
+        const first = chronological[0];
+        const last = chronological[chronological.length - 1];
+
+        document.getElementById("metaLine").textContent =
+          `${data[0].market} · JSON 배열 길이 ${data.length} · 필드: 시가·고가·저가·종가, 거래대금·거래량, 전일대비 등`;
+
+        document.getElementById("stats").hidden = false;
+        document.getElementById("rangeControls").hidden = false;
+        document.getElementById("chartSection").hidden = false;
+        document.getElementById("tableSection").hidden = false;
+        document.getElementById("loadHint").hidden = true;
+
+        document.getElementById("sLast").textContent = formatKrw(data[0].trade_price) + " 원";
+
+        const fromKst = first.candle_date_time_kst.slice(0, 10);
+        const toKst = last.candle_date_time_kst.slice(0, 10);
+        document.getElementById("sRange").textContent = `${fromKst} ~ ${toKst}`;
+
+        let hi = -Infinity;
+        let lo = Infinity;
+        for (const c of data) {
+          hi = Math.max(hi, c.high_price);
+          lo = Math.min(lo, c.low_price);
+        }
+        document.getElementById("sHiLo").textContent =
+          `${formatKrw(hi)} / ${formatKrw(lo)}`;
+        const roi = ((last.trade_price - first.trade_price) / first.trade_price) * 100;
+        const roiEl = document.getElementById("sRoi");
+        roiEl.textContent = `${roi >= 0 ? "+" : ""}${roi.toFixed(2)}%`;
+        roiEl.className = `val ${roi >= 0 ? "roi-up" : "roi-down"}`;
+
+        const labels = chronological.map((c) => c.candle_date_time_kst.slice(0, 10));
+        const closes = chronological.map((c) => c.trade_price);
+        const volumes = chronological.map((c) => c.candle_acc_trade_volume);
+        const changePct = chronological.map((c) => c.change_rate * 100);
+        const changeBarBg = changePct.map((v) =>
+          v >= 0 ? "rgba(34, 197, 94, 0.55)" : "rgba(239, 68, 68, 0.55)"
+        );
+        const changeBarBorder = changePct.map((v) =>
+          v >= 0 ? "rgb(34, 197, 94)" : "rgb(239, 68, 68)"
+        );
+
+        destroyCharts();
+        const gridColor =
+          window.matchMedia("(prefers-color-scheme: light)").matches
+            ? "rgba(0,0,0,0.06)"
+            : "rgba(255,255,255,0.08)";
+        const tickColor = getComputedStyle(document.documentElement)
+          .getPropertyValue("--muted")
+          .trim() || "#8b9cb3";
+
+        const xScale = {
+          ticks: {
+            maxTicksLimit: 8,
+            color: tickColor,
+            maxRotation: 0,
+          },
+          grid: { color: gridColor },
+        };
+
+        chartInstances.price = new Chart(
+          document.getElementById("priceChart").getContext("2d"),
+          {
+            type: "line",
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: "종가 (KRW)",
+                  data: closes,
+                  borderColor: "#f7931a",
+                  backgroundColor: "rgba(247, 147, 26, 0.12)",
+                  fill: true,
+                  tension: 0.15,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
+                  borderWidth: 2,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) =>
+                      "종가: " + nfKrw0.format(ctx.parsed.y) + " 원",
+                  },
+                },
+              },
+              scales: {
+                x: { ...xScale },
+                y: {
+                  ticks: {
+                    color: tickColor,
+                    callback: (v) => nfKrw0.format(v),
+                  },
+                  grid: { color: gridColor },
+                },
+              },
+            },
+          }
+        );
+
+        chartInstances.volume = new Chart(
+          document.getElementById("volumeChart").getContext("2d"),
+          {
+            type: "bar",
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: "거래량 (BTC)",
+                  data: volumes,
+                  backgroundColor: "rgba(59, 130, 246, 0.45)",
+                  borderColor: "rgb(59, 130, 246)",
+                  borderWidth: 1,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) =>
+                      "거래량: " + nfVol.format(ctx.parsed.y) + " BTC",
+                  },
+                },
+              },
+              scales: {
+                x: { ...xScale },
+                y: {
+                  ticks: {
+                    color: tickColor,
+                    callback: (v) => nfVol.format(v),
+                  },
+                  grid: { color: gridColor },
+                },
+              },
+            },
+          }
+        );
+
+        chartInstances.change = new Chart(
+          document.getElementById("changeChart").getContext("2d"),
+          {
+            type: "bar",
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: "등락률 (%)",
+                  data: changePct,
+                  backgroundColor: changeBarBg,
+                  borderColor: changeBarBorder,
+                  borderWidth: 1,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) => {
+                      const v = ctx.parsed.y;
+                      const sign = v >= 0 ? "+" : "";
+                      return `등락률: ${sign}${v.toFixed(2)}%`;
+                    },
+                  },
+                },
+              },
+              scales: {
+                x: { ...xScale },
+                y: {
+                  ticks: {
+                    color: tickColor,
+                    callback: (v) => `${v}%`,
+                  },
+                  grid: { color: gridColor },
+                },
+              },
+            },
+          }
+        );
+
+        const tbody = document.getElementById("tbody");
+        tbody.innerHTML = "";
+        for (const c of data) {
+          const tr = document.createElement("tr");
+          const pct = c.change_rate * 100;
+          const pctClass = pct >= 0 ? "pct-up" : "pct-down";
+          const sign = pct >= 0 ? "+" : "";
+          tr.innerHTML = `
+            <td>${c.candle_date_time_kst.slice(0, 10)}</td>
+            <td>${formatKrw(c.opening_price)}</td>
+            <td>${formatKrw(c.high_price)}</td>
+            <td>${formatKrw(c.low_price)}</td>
+            <td>${formatKrw(c.trade_price)}</td>
+            <td class="${pctClass}">${sign}${formatKrw(c.change_price)}</td>
+            <td class="${pctClass}">${sign}${pct.toFixed(2)}%</td>
+            <td>${nfKrw.format(Math.round(c.candle_acc_trade_price))}</td>
+            <td>${nfVol.format(c.candle_acc_trade_volume)}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+
+      function initRangeControls(data) {
+        const chronological = [...data].reverse();
+        const minDate = chronological[0].candle_date_time_kst.slice(0, 10);
+        const maxDate = chronological[chronological.length - 1].candle_date_time_kst.slice(0, 10);
+        const startInput = document.getElementById("startDate");
+        const endInput = document.getElementById("endDate");
+        startInput.min = minDate;
+        startInput.max = maxDate;
+        endInput.min = minDate;
+        endInput.max = maxDate;
+        startInput.value = minDate;
+        endInput.value = maxDate;
+      }
+
+      function applyDateRange() {
+        if (!Array.isArray(allData) || allData.length === 0) return;
+        const startDate = document.getElementById("startDate").value;
+        const endDate = document.getElementById("endDate").value;
+        const filtered = allData.filter((c) => {
+          const d = c.candle_date_time_kst.slice(0, 10);
+          return d >= startDate && d <= endDate;
+        });
+        const limited = filtered.slice(0, 100);
+        if (limited.length === 0) {
+          document.getElementById("metaLine").textContent =
+            "선택한 기간에 데이터가 없습니다.";
+          return;
+        }
+        render(limited);
+      }
+
+      async function loadFromFetch() {
+        const res = await fetch(JSON_NAME);
+        if (!res.ok) throw new Error(res.statusText);
+        return res.json();
+      }
+
+      function showFileHint() {
+        document.getElementById("loadHint").hidden = false;
+        document.getElementById("metaLine").textContent =
+          "자동 로드에 실패했습니다. 아래에서 JSON을 선택하거나 로컬 서버로 여세요.";
+      }
+
+      loadFromFetch()
+        .then((data) => {
+          allData = Array.isArray(data) ? data : [];
+          if (!allData.length) throw new Error("empty");
+          initRangeControls(allData);
+          applyDateRange();
+        })
+        .catch(() => {
+          showFileHint();
+        });
+
+      document.getElementById("jsonFile").addEventListener("change", (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            allData = Array.isArray(data) ? data : [];
+            if (!allData.length) throw new Error("empty");
+            initRangeControls(allData);
+            applyDateRange();
+          } catch {
+            document.getElementById("metaLine").textContent =
+              "JSON 파싱에 실패했습니다.";
+          }
+        };
+        reader.readAsText(f, "UTF-8");
+      });
+
+      document.getElementById("applyRange").addEventListener("click", () => {
+        applyDateRange();
+      });
+
+      document.getElementById("resetRange").addEventListener("click", () => {
+        initRangeControls(allData);
+        applyDateRange();
+      });
+    </script>
+  </body>
+</html>
